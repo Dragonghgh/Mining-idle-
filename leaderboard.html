@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Idle Miner with Friends</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <style>
+        :root {
+            --mine-dark: #1a1a1a;
+            --mine-medium: #2d2d2d;
+            --gold: #ffd700;
+            --gold-dark: #daa520;
+            --leaderboard-blue: #4a6bff;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: var(--mine-dark);
+            color: white;
+            touch-action: manipulation;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+            background-color: var(--mine-medium);
+            border-radius: 10px;
+            border: 2px solid var(--gold-dark);
+        }
+        
+        button {
+            background-color: var(--gold-dark);
+            color: #222;
+            border: none;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            width: 100%;
+        }
+        
+        .leaderboard {
+            background: rgba(30, 30, 50, 0.3);
+            border: 2px solid var(--leaderboard-blue);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        #leaderboardList {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        
+        .player-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .player-entry.you {
+            background: rgba(106, 13, 173, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⛏️ Idle Miner ⛏️</h1>
+        
+        <!-- Your Game UI Here -->
+        <div>
+            <h2>Gold: <span id="gold">0</span></h2>
+            <button id="mineGold">⛏️ Mine Gold</button>
+        </div>
+        
+        <!-- Leaderboard -->
+        <div class="leaderboard">
+            <h3>🏆 Friends Leaderboard</h3>
+            <div id="connectionStatus">🔵 Connecting...</div>
+            <div id="leaderboardList">Loading...</div>
+            <input type="text" id="playerNameInput" placeholder="Your name" maxlength="20">
+            <button id="saveNameBtn">Save Name</button>
+        </div>
+    </div>
+
+    <script>
+        // Your Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDd-48rcfV2Dopxv5mu5YX8QynoFqShFz4",
+            authDomain: "idleminerleaderboard.firebaseapp.com",
+            databaseURL: "https://idleminerleaderboard-default-rtdb.firebaseio.com",
+            projectId: "idleminerleaderboard",
+            storageBucket: "idleminerleaderboard.firebasestorage.app",
+            messagingSenderId: "204607109355",
+            appId: "1:204607109355:web:5098c500b3c00d5ca426ae"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Game State
+        const game = {
+            gold: 0,
+            playerId: localStorage.getItem('playerId') || 'player-' + Math.random().toString(36).substr(2, 9),
+            playerName: localStorage.getItem('playerName') || ''
+        };
+        localStorage.setItem('playerId', game.playerId);
+
+        // DOM Elements
+        const goldDisplay = document.getElementById('gold');
+        const mineBtn = document.getElementById('mineGold');
+        const nameInput = document.getElementById('playerNameInput');
+        const saveNameBtn = document.getElementById('saveNameBtn');
+        const leaderboardList = document.getElementById('leaderboardList');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // Initialize
+        nameInput.value = game.playerName;
+        firebase.auth().signInAnonymously().catch(console.error);
+
+        // Game Functions
+        mineBtn.addEventListener('click', () => {
+            game.gold += 1;
+            goldDisplay.textContent = game.gold;
+            updateLeaderboard();
+        });
+
+        saveNameBtn.addEventListener('click', () => {
+            const name = nameInput.value.trim();
+            if (name.length >= 2) {
+                game.playerName = name;
+                localStorage.setItem('playerName', name);
+                updateLeaderboard();
+            }
+        });
+
+        function updateLeaderboard() {
+            if (!game.playerName) return;
+            
+            database.ref('players/' + game.playerId).set({
+                name: game.playerName,
+                gold: game.gold,
+                lastUpdated: Date.now()
+            });
+        }
+
+        // Load Leaderboard
+        database.ref('players').orderByChild('gold').limitToLast(50).on('value', (snapshot) => {
+            const players = [];
+            snapshot.forEach(child => {
+                players.push(child.val());
+            });
+            
+            players.sort((a, b) => b.gold - a.gold);
+            
+            leaderboardList.innerHTML = '';
+            players.forEach((player, index) => {
+                const entry = document.createElement('div');
+                entry.className = `player-entry ${player.name === game.playerName ? 'you' : ''}`;
+                entry.innerHTML = `
+                    <span>${index + 1}. ${player.name}</span>
+                    <span>${player.gold} gold</span>
+                `;
+                leaderboardList.appendChild(entry);
+            });
+            
+            connectionStatus.textContent = "🟢 Connected";
+        });
+    </script>
+</body>
+</html>
