@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Idle Miner</title>
+    <style>
+        /* Color Theme */
+        :root {
+            --mine-dark: #2a2118;
+            --mine-medium: #3a2e20;
+            --mine-light: #4a3c30;
+            --gold: #ffd700;
+            --gold-dark: #daa520;
+            --coal: #333333;
+            --text-light: #f0f0f0;
+        }
+        
+        /* Base Styles */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: var(--mine-dark);
+            color: var(--text-light);
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+        
+        /* Layout */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+            background-color: var(--mine-medium);
+            border-radius: 10px;
+            border: 2px solid var(--gold-dark);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Typography */
+        h1 {
+            color: var(--gold);
+            text-align: center;
+            margin: 0 0 15px 0;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+            border-bottom: 2px solid var(--gold-dark);
+            padding-bottom: 10px;
+        }
+        
+        h2, h3 {
+            color: var(--gold);
+            margin: 10px 0;
+        }
+        
+        /* Buttons */
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background-color: var(--gold-dark);
+            color: #222;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #8b6914;
+            transition: all 0.1s;
+        }
+        
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #8b6914;
+        }
+        
+        button:disabled {
+            background-color: #5a5a5a;
+            color: #999;
+            box-shadow: 0 3px 0 #333;
+            transform: none;
+        }
+        
+        /* Game Sections */
+        .resource-panel {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+            border: 1px solid var(--gold);
+        }
+        
+        .upgrade-panel {
+            background-color: rgba(74, 60, 48, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+            border: 1px dashed var(--gold);
+        }
+        
+        /* Counters */
+        .counter {
+            font-weight: bold;
+            color: var(--gold);
+            font-size: 1.2em;
+        }
+        
+        .cost {
+            color: #ccc;
+            font-style: italic;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            button {
+                padding: 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⛏️ Idle Miner ⛏️</h1>
+        
+        <div class="resource-panel">
+            <h2>Gold: <span id="gold" class="counter">0</span></h2>
+            <button id="mineGold">⛏️ Mine Gold</button>
+            <p>Gold per click: <span id="goldPerClick" class="counter">1</span></p>
+        </div>
+        
+        <div class="resource-panel">
+            <h3>⛑️ Miners: <span id="workers" class="counter">0</span></h3>
+            <button id="hireWorker">Hire Miner (<span class="cost">Cost: <span id="workerCost">10</span> gold</span>)</button>
+            <p>Gold per second: <span id="goldPerSecond" class="counter">0</span></p>
+        </div>
+        
+        <div class="upgrade-panel">
+            <h3>🔧 Upgrades</h3>
+            <button id="upgradePickaxe">Upgrade Pickaxe (<span class="cost">Cost: <span id="pickaxeCost">50</span> gold</span>)</button>
+            <p>Current level: <span id="pickaxeLevel" class="counter">1</span></p>
+        </div>
+        
+        <div class="upgrade-panel">
+            <button id="upgradeWorker">Train Miners (<span class="cost">Cost: <span id="workerUpgradeCost">100</span> gold</span>)</button>
+            <p>Miner efficiency: <span id="workerEfficiency" class="counter">1</span>x</p>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
