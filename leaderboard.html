@@ -1,35 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Idle Miner with Leaderboard</title>
+    <title>Idle Miner Leaderboard</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-        #leaderboard { border: 2px solid #4a6bff; border-radius: 10px; padding: 15px; margin-top: 20px; }
-        .entry { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #ddd; }
-        .you { background-color: #f0f0ff; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        #leaderboard {
+            background: #2d2d2d;
+            border: 2px solid #4a6bff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: #333;
+            border-radius: 5px;
+        }
+        .you {
+            background: #4a148c;
+            border-left: 3px solid #9c64ff;
+        }
+        button {
+            background: #ffd700;
+            color: #222;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        input {
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
-    <h1>⛏️ Idle Miner Leaderboard</h1>
+    <h1>⛏️ Idle Miner</h1>
+    
     <div>
-        <h3>Your Stats</h3>
+        <h3>Your Miner</h3>
         <p>Gold: <span id="gold">0</span></p>
         <button id="mineBtn">Mine Gold</button>
-        <input type="text" id="nameInput" placeholder="Your name">
-        <button id="saveBtn">Save</button>
+        <input type="text" id="nameInput" placeholder="Enter your miner name" value="">
+        <button id="saveBtn">Save Name</button>
     </div>
     
+    <!-- LEADERBOARD UI (THIS IS WHAT YOU WEREN'T SEEING) -->
     <div id="leaderboard">
         <h3>🏆 Leaderboard</h3>
-        <div id="leaderboardList">Loading...</div>
+        <div id="leaderboardList">
+            Loading leaderboard...
+        </div>
     </div>
 
     <script>
-        // YOUR FIREBASE CONFIG (working with your credentials)
+        // YOUR FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyDd-48rcfV2Dopxv5mu5YX8QynoFqShFz4",
             authDomain: "idleminerleaderboard.firebaseapp.com",
@@ -45,7 +87,8 @@
         const db = firebase.database();
         
         // Game State
-        const playerId = Math.random().toString(36).substr(2, 9);
+        const playerId = localStorage.getItem('playerId') || Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('playerId', playerId);
         let playerName = localStorage.getItem('minerName') || '';
         let gold = 0;
         
@@ -59,24 +102,29 @@
         // Initialize
         nameInput.value = playerName;
         
-        // Game Functions
+        // Mine Gold
         mineBtn.addEventListener('click', () => {
             gold++;
             goldDisplay.textContent = gold;
             updateLeaderboard();
         });
         
+        // Save Name
         saveBtn.addEventListener('click', () => {
             playerName = nameInput.value.trim();
             if (playerName.length >= 2) {
                 localStorage.setItem('minerName', playerName);
                 updateLeaderboard();
-                alert('Name saved!');
+                alert(`Welcome, ${playerName}!`);
+            } else {
+                alert("Name must be at least 2 characters!");
             }
         });
         
+        // Update Leaderboard
         function updateLeaderboard() {
-            if (!playerName) return;
+            if (playerName.length < 2) return;
+            
             db.ref('players/' + playerId).set({
                 name: playerName,
                 gold: gold,
@@ -85,21 +133,29 @@
         }
         
         // Load Leaderboard
-        db.ref('players').orderByChild('gold').limitToLast(10).on('value', (snapshot) => {
+        db.ref('players').orderByChild('gold').limitToLast(50).on('value', (snapshot) => {
             const players = [];
             snapshot.forEach(child => {
                 players.push(child.val());
             });
             
+            // Sort by gold (highest first)
             players.sort((a, b) => b.gold - a.gold);
             
+            // Clear and rebuild leaderboard
             leaderboardList.innerHTML = '';
+            
+            if (players.length === 0) {
+                leaderboardList.innerHTML = '<div class="entry">No miners yet!</div>';
+                return;
+            }
+            
             players.forEach((player, index) => {
                 const entry = document.createElement('div');
                 entry.className = `entry ${player.name === playerName ? 'you' : ''}`;
                 entry.innerHTML = `
                     <span>${index + 1}. ${player.name}</span>
-                    <span>${player.gold} gold</span>
+                    <span>${player.gold.toLocaleString()} gold</span>
                 `;
                 leaderboardList.appendChild(entry);
             });
