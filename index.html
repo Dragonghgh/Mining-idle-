@@ -5,18 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Idle Miner</title>
     <style>
-        /* Color Theme */
         :root {
-            --mine-dark: #2a2118;
-            --mine-medium: #3a2e20;
-            --mine-light: #4a3c30;
+            --mine-dark: #1a1a1a;
+            --mine-medium: #2d2d2d;
+            --mine-light: #3d3d3d;
             --gold: #ffd700;
             --gold-dark: #daa520;
-            --coal: #333333;
+            --prestige-purple: #6a0dad;
             --text-light: #f0f0f0;
         }
         
-        /* Base Styles */
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
@@ -32,7 +30,6 @@
             overflow-x: hidden;
         }
         
-        /* Layout */
         .container {
             max-width: 600px;
             margin: 0 auto;
@@ -43,7 +40,6 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
         
-        /* Typography */
         h1 {
             color: var(--gold);
             text-align: center;
@@ -53,12 +49,11 @@
             padding-bottom: 10px;
         }
         
-        h2, h3 {
+        h2, h3, h4 {
             color: var(--gold);
             margin: 10px 0;
         }
         
-        /* Buttons */
         button {
             display: block;
             width: 100%;
@@ -87,7 +82,6 @@
             transform: none;
         }
         
-        /* Game Sections */
         .resource-panel {
             background-color: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
@@ -104,7 +98,34 @@
             border: 1px dashed var(--gold);
         }
         
-        /* Counters */
+        .prestige-panel {
+            background-color: rgba(106, 13, 173, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            border: 2px solid var(--prestige-purple);
+        }
+        
+        .prestige-panel h3 {
+            color: #9c64ff;
+            border-bottom: 1px solid var(--prestige-purple);
+        }
+        
+        #prestigeButton {
+            background-color: var(--prestige-purple);
+            color: white;
+            box-shadow: 0 4px 0 #4a0072;
+        }
+        
+        #prestigeButton:active {
+            box-shadow: 0 2px 0 #4a0072;
+        }
+        
+        .prestige-upgrade {
+            background-color: rgba(74, 20, 140, 0.3);
+            margin: 5px 0;
+        }
+        
         .counter {
             font-weight: bold;
             color: var(--gold);
@@ -116,7 +137,6 @@
             font-style: italic;
         }
         
-        /* Mobile Optimizations */
         @media (max-width: 480px) {
             body {
                 padding: 5px;
@@ -130,6 +150,11 @@
                 padding: 10px;
                 font-size: 14px;
             }
+        }
+        
+        @keyframes tokenPop {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
         }
     </style>
 </head>
@@ -159,8 +184,294 @@
             <button id="upgradeWorker">Train Miners (<span class="cost">Cost: <span id="workerUpgradeCost">100</span> gold</span>)</button>
             <p>Miner efficiency: <span id="workerEfficiency" class="counter">1</span>x</p>
         </div>
+        
+        <div class="prestige-panel">
+            <h3>💎 Prestige</h3>
+            <p>Prestige Tokens: <span id="prestigeTokens" class="counter">0</span></p>
+            <p>Next Reset Grants: <span id="nextPrestigeTokens" class="counter">0</span> tokens</p>
+            <button id="prestigeButton">Ascend Mine Shaft (Reset for Tokens)</button>
+            
+            <div class="upgrade-panel">
+                <h4>Prestige Upgrades</h4>
+                <button class="prestige-upgrade" id="upgradeGlobalGain">+10% All Gains (<span class="cost"><span id="globalGainCost">1</span> tokens</span>)</button>
+                <button class="prestige-upgrade" id="upgradeWorkerSpeed">+15% Worker Speed (<span class="cost"><span id="workerSpeedCost">2</span> tokens</span>)</button>
+                <button class="prestige-upgrade" id="upgradeClickMulti">+20% Click Power (<span class="cost"><span id="clickMultiCost">3</span> tokens</span>)</button>
+            </div>
+        </div>
     </div>
 
-    <script src="game.js"></script>
+    <script>
+        // Game State
+        const game = {
+            gold: 0,
+            goldPerClick: 1,
+            goldPerSecond: 0,
+            workers: 0,
+            workerCost: 10,
+            workerEfficiency: 1,
+            workerUpgradeCost: 100,
+            pickaxeLevel: 1,
+            pickaxeCost: 50,
+            lastUpdate: Date.now(),
+            prestigeTokens: 0,
+            prestigeMultipliers: {
+                globalGain: 1.0,
+                workerSpeed: 1.0,
+                clickMulti: 1.0
+            },
+            prestigeUpgradeCosts: {
+                globalGain: 1,
+                workerSpeed: 2,
+                clickMulti: 3
+            }
+        };
+
+        // DOM Elements
+        const elements = {
+            gold: document.getElementById('gold'),
+            goldPerClick: document.getElementById('goldPerClick'),
+            goldPerSecond: document.getElementById('goldPerSecond'),
+            workers: document.getElementById('workers'),
+            workerCost: document.getElementById('workerCost'),
+            workerEfficiency: document.getElementById('workerEfficiency'),
+            workerUpgradeCost: document.getElementById('workerUpgradeCost'),
+            pickaxeLevel: document.getElementById('pickaxeLevel'),
+            pickaxeCost: document.getElementById('pickaxeCost'),
+            mineGold: document.getElementById('mineGold'),
+            hireWorker: document.getElementById('hireWorker'),
+            upgradePickaxe: document.getElementById('upgradePickaxe'),
+            upgradeWorker: document.getElementById('upgradeWorker'),
+            prestigeTokens: document.getElementById('prestigeTokens'),
+            nextPrestigeTokens: document.getElementById('nextPrestigeTokens'),
+            prestigeButton: document.getElementById('prestigeButton'),
+            upgradeGlobalGain: document.getElementById('upgradeGlobalGain'),
+            upgradeWorkerSpeed: document.getElementById('upgradeWorkerSpeed'),
+            upgradeClickMulti: document.getElementById('upgradeClickMulti'),
+            globalGainCost: document.getElementById('globalGainCost'),
+            workerSpeedCost: document.getElementById('workerSpeedCost'),
+            clickMultiCost: document.getElementById('clickMultiCost')
+        };
+
+        // Initialize Game
+        function init() {
+            loadGame();
+            setupEventListeners();
+            requestAnimationFrame(gameLoop);
+            
+            // Prevent zooming
+            document.addEventListener('gesturestart', (e) => e.preventDefault());
+            document.addEventListener('touchmove', (e) => {
+                if (e.scale !== 1) e.preventDefault();
+            }, { passive: false });
+        }
+
+        // Load Game
+        function loadGame() {
+            const saved = localStorage.getItem('idleMinerSave');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                
+                // Calculate offline progress
+                if (parsed.lastUpdate) {
+                    const seconds = (Date.now() - parsed.lastUpdate) / 1000;
+                    parsed.gold += parsed.goldPerSecond * seconds;
+                }
+                
+                Object.assign(game, parsed);
+                updateUI();
+            }
+        }
+
+        // Save Game
+        function saveGame() {
+            game.lastUpdate = Date.now();
+            localStorage.setItem('idleMinerSave', JSON.stringify(game));
+        }
+
+        // Update UI
+        function updateUI() {
+            elements.gold.textContent = Math.floor(game.gold);
+            elements.goldPerClick.textContent = (game.goldPerClick * game.prestigeMultipliers.clickMulti * game.prestigeMultipliers.globalGain).toFixed(1);
+            elements.goldPerSecond.textContent = (game.goldPerSecond * game.prestigeMultipliers.globalGain * game.prestigeMultipliers.workerSpeed).toFixed(1);
+            elements.workers.textContent = game.workers;
+            elements.workerCost.textContent = game.workerCost;
+            elements.workerEfficiency.textContent = game.workerEfficiency;
+            elements.workerUpgradeCost.textContent = game.workerUpgradeCost;
+            elements.pickaxeLevel.textContent = game.pickaxeLevel;
+            elements.pickaxeCost.textContent = game.pickaxeCost;
+            elements.prestigeTokens.textContent = game.prestigeTokens;
+            elements.nextPrestigeTokens.textContent = calculatePrestigeTokens();
+            elements.globalGainCost.textContent = game.prestigeUpgradeCosts.globalGain;
+            elements.workerSpeedCost.textContent = game.prestigeUpgradeCosts.workerSpeed;
+            elements.clickMultiCost.textContent = game.prestigeUpgradeCosts.clickMulti;
+            
+            // Update button states
+            elements.hireWorker.disabled = game.gold < game.workerCost;
+            elements.upgradePickaxe.disabled = game.gold < game.pickaxeCost;
+            elements.upgradeWorker.disabled = game.gold < game.workerUpgradeCost;
+            elements.upgradeGlobalGain.disabled = game.prestigeTokens < game.prestigeUpgradeCosts.globalGain;
+            elements.upgradeWorkerSpeed.disabled = game.prestigeTokens < game.prestigeUpgradeCosts.workerSpeed;
+            elements.upgradeClickMulti.disabled = game.prestigeTokens < game.prestigeUpgradeCosts.clickMulti;
+            elements.prestigeButton.disabled = calculatePrestigeTokens() < 1;
+        }
+
+        // Game Loop
+        function gameLoop() {
+            const now = Date.now();
+            const delta = (now - game.lastUpdate) / 1000;
+            game.lastUpdate = now;
+            
+            // Add passive gold from workers
+            if (game.workers > 0) {
+                game.gold += game.goldPerSecond * delta * game.prestigeMultipliers.globalGain * game.prestigeMultipliers.workerSpeed;
+                updateUI();
+            }
+            
+            saveGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Prestige Functions
+        function calculatePrestigeTokens() {
+            const goldValue = Math.sqrt(game.gold / 100000);
+            const workerValue = Math.sqrt(game.workers / 10);
+            const pickaxeValue = Math.sqrt(game.pickaxeLevel / 5);
+            return Math.floor(goldValue + workerValue + pickaxeValue);
+        }
+
+        function performPrestige() {
+            const earnedTokens = calculatePrestigeTokens();
+            game.prestigeTokens += earnedTokens;
+            
+            // Store multipliers and costs
+            const multipliers = {...game.prestigeMultipliers};
+            const upgradeCosts = {...game.prestigeUpgradeCosts};
+            
+            // Reset game state
+            Object.assign(game, {
+                gold: 0,
+                goldPerClick: 1,
+                goldPerSecond: 0,
+                workers: 0,
+                workerCost: 10,
+                workerEfficiency: 1,
+                workerUpgradeCost: 100,
+                pickaxeLevel: 1,
+                pickaxeCost: 50,
+                lastUpdate: Date.now(),
+                prestigeMultipliers: multipliers,
+                prestigeUpgradeCosts: upgradeCosts
+            });
+            
+            showPrestigeEffect(earnedTokens);
+            updateUI();
+        }
+
+        function showPrestigeEffect(tokensEarned) {
+            const effect = document.createElement('div');
+            effect.style.position = 'fixed';
+            effect.style.top = '50%';
+            effect.style.left = '50%';
+            effect.style.transform = 'translate(-50%, -50%)';
+            effect.style.fontSize = '24px';
+            effect.style.fontWeight = 'bold';
+            effect.style.color = '#9c64ff';
+            effect.style.textShadow = '0 0 10px #6a0dad';
+            effect.style.zIndex = '1000';
+            effect.style.animation = 'tokenPop 2s forwards';
+            effect.textContent = `+${tokensEarned} Prestige Tokens!`;
+            
+            document.body.appendChild(effect);
+            setTimeout(() => effect.remove(), 2000);
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Mine Gold
+            elements.mineGold.addEventListener('click', () => {
+                game.gold += game.goldPerClick * game.prestigeMultipliers.clickMulti * game.prestigeMultipliers.globalGain;
+                elements.mineGold.textContent = '⛏️ Mining...';
+                setTimeout(() => {
+                    elements.mineGold.textContent = '⛏️ Mine Gold';
+                }, 200);
+                updateUI();
+            });
+            
+            // Hire Worker
+            elements.hireWorker.addEventListener('click', () => {
+                if (game.gold >= game.workerCost) {
+                    game.gold -= game.workerCost;
+                    game.workers++;
+                    game.goldPerSecond = game.workers * game.workerEfficiency;
+                    game.workerCost = Math.floor(game.workerCost * 1.5);
+                    updateUI();
+                }
+            });
+            
+            // Upgrade Pickaxe
+            elements.upgradePickaxe.addEventListener('click', () => {
+                if (game.gold >= game.pickaxeCost) {
+                    game.gold -= game.pickaxeCost;
+                    game.goldPerClick += 1;
+                    game.pickaxeLevel++;
+                    game.pickaxeCost = Math.floor(game.pickaxeCost * 2);
+                    updateUI();
+                }
+            });
+            
+            // Upgrade Worker
+            elements.upgradeWorker.addEventListener('click', () => {
+                if (game.gold >= game.workerUpgradeCost) {
+                    game.gold -= game.workerUpgradeCost;
+                    game.workerEfficiency += 1;
+                    game.goldPerSecond = game.workers * game.workerEfficiency;
+                    game.workerUpgradeCost = Math.floor(game.workerUpgradeCost * 2.5);
+                    updateUI();
+                }
+            });
+            
+            // Prestige Reset
+            elements.prestigeButton.addEventListener('click', () => {
+                if (calculatePrestigeTokens() > 0) {
+                    if (confirm(`Ascend to deeper mines and reset your progress?\n\nYou will gain ${calculatePrestigeTokens()} prestige tokens!\n\nAll progress will reset but you keep prestige upgrades.`)) {
+                        performPrestige();
+                    }
+                } else {
+                    alert("You need more progress to earn prestige tokens!");
+                }
+            });
+            
+            // Prestige Upgrades
+            elements.upgradeGlobalGain.addEventListener('click', () => {
+                if (game.prestigeTokens >= game.prestigeUpgradeCosts.globalGain) {
+                    game.prestigeTokens -= game.prestigeUpgradeCosts.globalGain;
+                    game.prestigeMultipliers.globalGain += 0.1;
+                    game.prestigeUpgradeCosts.globalGain = Math.ceil(game.prestigeUpgradeCosts.globalGain * 1.5);
+                    updateUI();
+                }
+            });
+            
+            elements.upgradeWorkerSpeed.addEventListener('click', () => {
+                if (game.prestigeTokens >= game.prestigeUpgradeCosts.workerSpeed) {
+                    game.prestigeTokens -= game.prestigeUpgradeCosts.workerSpeed;
+                    game.prestigeMultipliers.workerSpeed += 0.15;
+                    game.prestigeUpgradeCosts.workerSpeed = Math.ceil(game.prestigeUpgradeCosts.workerSpeed * 1.5);
+                    updateUI();
+                }
+            });
+            
+            elements.upgradeClickMulti.addEventListener('click', () => {
+                if (game.prestigeTokens >= game.prestigeUpgradeCosts.clickMulti) {
+                    game.prestigeTokens -= game.prestigeUpgradeCosts.clickMulti;
+                    game.prestigeMultipliers.clickMulti += 0.2;
+                    game.prestigeUpgradeCosts.clickMulti = Math.ceil(game.prestigeUpgradeCosts.clickMulti * 1.5);
+                    updateUI();
+                }
+            });
+        }
+
+        // Start the game
+        init();
+    </script>
 </body>
 </html>
