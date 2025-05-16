@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaderboard Test</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <style>
+        #leaderboard {
+            border: 3px solid red; /* Temporary bold border */
+            padding: 20px;
+            margin: 20px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <h1>TEST PAGE</h1>
+    
+    <!-- SIMPLE LEADERBOARD -->
+    <div id="leaderboard">
+        <h2>LEADERBOARD SHOULD APPEAR HERE</h2>
+        <div id="leaderboardList">Loading...</div>
+    </div>
+
+    <script>
+        // Your Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDd-48rcfV2Dopxv5mu5YX8QynoFqShFz4",
+            databaseURL: "https://idleminerleaderboard-default-rtdb.firebaseio.com"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        // Force display test data
+        db.ref('test').set({ message: "Firebase is working!" });
+        
+        // Simple leaderboard test
+        db.ref('test').on('value', (snapshot) => {
+            document.getElementById('leaderboardList').innerHTML = 
+                "Firebase connected! Data: " + JSON.stringify(snapshot.val());
+        });
+    </script>
+</body>
+</html>
